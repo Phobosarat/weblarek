@@ -103,29 +103,31 @@ Presenter - презентер содержит основную логику п
 
 ```ts
 interface IProduct {
-  id: string;
-  description: string;
-  image: string;
-  title: string;
-  category: string;
-  price: number | null;
+  id: string; - уникальный идентификатор товара.
+  description: string; - описание товара.
+  image: string; - URL изображение товара.
+  title: string; - название товара.
+  category: string; - категория товара.
+  price: number | null; - цена товара (может отсутствовать).
 } 
 - Интерфейс IProduct описывает товар, который отображается в каталоге и может быть добавлен в корзину.
 
 Интерфейс покупателя
-type TPayment = 'card' | 'cash' | null;
+type TPayment = 'card' | 'cash' | null; - способ оплаты.
 
 interface IBuyer {
-  payment: TPayment;
-  email: string;
-  phone: string;
-  address: string;
+  payment: TPayment; - способ оплаты.
+  email: string; - Email покупателя.
+  phone: string; - телефон покупателя.
+  address: string; - адрес доставки.
 }
 - Интерфейс IBuyer описывает данные покупателя, необходимые для оформления заказа.
 
 Интерфейс ошибок валидации
 type TBuyerErrors = Partial<Record<keyof IBuyer, string>>; - TBuyerErrors используется для хранения ошибок валидации данных покупателя. Если поле заполнено корректно, ошибка для него отсутствует.
-
+Ключ- имя поля из IBuyer.
+Значение - текст ошибки.
+Если поле валидно - ошибка отсутствует.
 
 ###### Модели данных
 

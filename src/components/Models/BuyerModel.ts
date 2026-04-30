@@ -1,4 +1,4 @@
-import { IBuyer, TBuyerErrors } from '../../../types';
+import { IBuyer, TBuyerErrors } from '../../types';
 
 export class BuyerModel {
   protected data: IBuyer = {
