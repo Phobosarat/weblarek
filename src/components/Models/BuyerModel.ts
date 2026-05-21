@@ -1,4 +1,5 @@
 import { IBuyer, TBuyerErrors } from '../../types';
+import { IEvents } from '../base/events';
 
 export class BuyerModel {
   protected data: IBuyer = {
@@ -8,11 +9,21 @@ export class BuyerModel {
     address: '',
   };
 
+  constructor(protected events: IEvents) {}
+
   setData(data: Partial<IBuyer>): void {
     this.data = {
       ...this.data,
       ...data,
     };
+
+    this.events.emit('buyer:changed', {
+      buyer: this.data,
+    });
+
+    this.events.emit('formErrors:changed', {
+      errors: this.validate(),
+    });
   }
 
   getData(): IBuyer {
@@ -26,6 +37,14 @@ export class BuyerModel {
       phone: '',
       address: '',
     };
+
+    this.events.emit('buyer:changed', {
+      buyer: this.data,
+    });
+
+    this.events.emit('formErrors:changed', {
+      errors: this.validate(),
+    });
   }
 
   validate(): TBuyerErrors {
