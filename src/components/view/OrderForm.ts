@@ -1,5 +1,6 @@
 import { IEvents } from '../base/events';
 import { Form } from './Form';
+import { TPayment } from '../../types';
 
 interface IOrderForm {
   payment: 'card' | 'cash' | null;
@@ -31,7 +32,7 @@ export class OrderForm extends Form<IOrderForm> {
     });
   }
 
-  set payment(value: 'card' | 'cash' | null) {
+  set payment(value: TPayment) {
     this.toggleClass(this._cardButton, 'button_alt-active', value === 'card');
     this.toggleClass(this._cashButton, 'button_alt-active', value === 'cash');
   }

@@ -12,40 +12,32 @@ export class BuyerModel {
   constructor(protected events: IEvents) {}
 
   setData(data: Partial<IBuyer>): void {
-    this.data = {
-      ...this.data,
-      ...data,
-    };
+  this.data = {
+    ...this.data,
+    ...data,
+  };
 
-    this.events.emit('buyer:changed', {
-      buyer: this.data,
-    });
-
-    this.events.emit('formErrors:changed', {
-      errors: this.validate(),
-    });
-  }
+  this.events.emit('buyer:changed');
+}
 
   getData(): IBuyer {
     return this.data;
   }
 
   clear(): void {
-    this.data = {
-      payment: null,
-      email: '',
-      phone: '',
-      address: '',
-    };
+  this.data = {
+    payment: null,
+    email: '',
+    phone: '',
+    address: '',
+  };
 
-    this.events.emit('buyer:changed', {
-      buyer: this.data,
-    });
+  this.events.emit('buyer:changed');
 
-    this.events.emit('formErrors:changed', {
-      errors: this.validate(),
-    });
-  }
+  this.events.emit('formErrors:changed', {
+    errors: this.validate(),
+  });
+}
 
   validate(): TBuyerErrors {
     const errors: TBuyerErrors = {};

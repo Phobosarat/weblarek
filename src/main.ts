@@ -12,6 +12,7 @@ import { BasketModel } from './components/Models/BasketModel';
 import { BuyerModel } from './components/Models/BuyerModel';
 
 import { Page } from './components/view/Page';
+import { Header } from './components/view/Header';
 import { CatalogCard } from './components/view/CatalogCard';
 
 import { Modal } from './components/view/Modal';
@@ -24,6 +25,8 @@ import { OrderForm } from './components/view/OrderForm';
 import { ContactsForm } from './components/view/ContactsForm';
 import { Success } from './components/view/Success';
 
+import { TPayment } from './types';
+
 const events = new EventEmitter();
 
 const api = new Api(API_URL);
@@ -33,7 +36,10 @@ const productCatalog = new ProductCatalog(events);
 const basketModel = new BasketModel(events);
 const buyerModel = new BuyerModel(events);
 
-const page = new Page(document.body, events);
+const page = new Page(document.body);
+const header = new Header(document.body, {
+  onClick: () => events.emit('basket:open'),
+});
 
 const modalContainer = document.querySelector<HTMLElement>('#modal-container')!;
 
@@ -46,12 +52,34 @@ const orderTemplate = document.querySelector<HTMLTemplateElement>('#order')!;
 const contactsTemplate = document.querySelector<HTMLTemplateElement>('#contacts')!;
 const successTemplate = document.querySelector<HTMLTemplateElement>('#success')!;
 
+const previewCard = new PreviewCard(
+  cloneTemplate<HTMLElement>(cardPreviewTemplate),
+  {
+    onClick: () => {
+      const product = productCatalog.getSelectedProduct();
+
+      if (!product) {
+        return;
+      }
+
+      if (basketModel.hasItem(product.id)) {
+        basketModel.removeItem(product);
+      } else {
+        basketModel.addItem(product);
+      }
+
+      modal.close();
+    },
+  }
+);
+
 const modal = new Modal(modalContainer, events);
 
-const basket = new Basket(
-  cloneTemplate<HTMLElement>(basketTemplate),
-  events
-);
+const basket = new Basket(cloneTemplate<HTMLElement>(basketTemplate), events);
+basket.render({
+  items: [],
+  total: 0,
+});
 
 const orderForm = new OrderForm(
   cloneTemplate<HTMLFormElement>(orderTemplate),
@@ -63,14 +91,11 @@ const contactsForm = new ContactsForm(
   events
 );
 
-const success = new Success(
-  cloneTemplate<HTMLElement>(successTemplate),
-  {
-    onClick: () => {
-      modal.close();
-    },
-  }
-);
+const success = new Success(cloneTemplate<HTMLElement>(successTemplate), {
+  onClick: () => {
+    modal.close();
+  },
+});
 
 
 // Изменение каталога товаров
@@ -106,26 +131,12 @@ events.on('product:selected', () => {
 
   const isInBasket = basketModel.hasItem(product.id);
 
-  const cardElement = cloneTemplate<HTMLElement>(cardPreviewTemplate);
-
-  const card = new PreviewCard(cardElement, {
-    onClick: () => {
-      if (basketModel.hasItem(product.id)) {
-        basketModel.removeItem(product);
-      } else {
-        basketModel.addItem(product);
-      }
-
-      modal.close();
-    },
-  });
-
-  card.buttonText = isInBasket
+  previewCard.buttonText = isInBasket
     ? 'Удалить из корзины'
     : 'В корзину';
 
   modal.render({
-    content: card.render({
+    content: previewCard.render({
       ...product,
       image: CDN_URL + product.image,
     }),
@@ -133,7 +144,7 @@ events.on('product:selected', () => {
 });
 
 events.on('basket:changed', () => {
-  page.render({
+  header.render({
     counter: basketModel.getCount(),
   });
 
@@ -148,7 +159,7 @@ events.on('basket:changed', () => {
 
     card.index = index + 1;
 
-return card.render(product);
+    return card.render(product);
   });
 
   basket.render({
@@ -156,41 +167,20 @@ return card.render(product);
     total: basketModel.getTotal(),
   });
 });
+
 events.on('basket:open', () => {
-  const basketItems = basketModel.getItems().map((product, index) => {
-    const cardElement = cloneTemplate<HTMLElement>(cardBasketTemplate);
-
-    const card = new BasketCard(cardElement, {
-      onClick: () => {
-        basketModel.removeItem(product);
-      },
-    });
-
-    card.index = index + 1;
-
-return card.render(product);
-  });
-
   modal.render({
-    content: basket.render({
-      items: basketItems,
-      total: basketModel.getTotal(),
-    }),
+    content: basket.render(),
   });
 });
 
 events.on('order:open', () => {
   modal.render({
-    content: orderForm.render({
-      payment: null,
-      address: '',
-      valid: false,
-      errors: '',
-    }),
+    content: orderForm.render(),
   });
 });
 
-events.on('order.payment:change', (data: { value: 'card' | 'cash' }) => {
+events.on('order.payment:change', (data: { value: TPayment }) => {
   buyerModel.setData({
     payment: data.value,
   });
@@ -210,28 +200,20 @@ events.on('buyer:changed', () => {
     payment: buyer.payment,
     address: buyer.address,
     valid: !errors.payment && !errors.address,
-    errors: Object.values(errors).join('; '),
+    errors: [errors.payment, errors.address].filter(Boolean).join('; '),
   });
 
   contactsForm.render({
     email: buyer.email,
     phone: buyer.phone,
     valid: !errors.email && !errors.phone,
-    errors: Object.values(errors).join('; '),
+    errors: [errors.email, errors.phone].filter(Boolean).join('; '),
   });
 });
 
 events.on('order:submit', () => {
-  const buyer = buyerModel.getData();
-  const errors = buyerModel.validate();
-
   modal.render({
-    content: contactsForm.render({
-      email: buyer.email,
-      phone: buyer.phone,
-      valid: !errors.email && !errors.phone,
-      errors: Object.values(errors).join('; '),
-    }),
+    content: contactsForm.render(),
   });
 });
 
@@ -252,15 +234,16 @@ events.on('contacts:submit', () => {
   const items = basketModel.getItems().map((item) => item.id);
   const total = basketModel.getTotal();
 
-  webLarekApi.createOrder({
-    ...buyer,
-    items,
-    total,
-  })
-    .then(() => {
+  webLarekApi
+    .createOrder({
+      ...buyer,
+      items,
+      total,
+    })
+    .then((response) => {
       modal.render({
         content: success.render({
-          total,
+          total: response.total,
         }),
       });
 
@@ -271,6 +254,7 @@ events.on('contacts:submit', () => {
       console.error('Ошибка оформления заказа:', error);
     });
 });
+
 
 // Загрузка товаров с сервера
 webLarekApi.getProducts()

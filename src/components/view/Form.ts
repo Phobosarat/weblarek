@@ -41,8 +41,8 @@ export class Form<T> extends Component<IFormState> {
     this.setText(this._errors, value);
   }
 
-  render(state: Partial<T> & IFormState): HTMLElement {
-    super.render(state);
-    return this.container;
-  }
+  render(state: Partial<T> & Partial<IFormState> = {}): HTMLElement {
+  super.render(state);
+  return this.container;
+}
 }
